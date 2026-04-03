@@ -1,0 +1,104 @@
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from api.deps import verify_token
+from services.chunker import chunk_and_save
+from services.html_cleaner import clean_html
+from bs4 import BeautifulSoup
+import requests
+import os
+import re
+import io
+import pdfplumber
+from urllib.parse import urlparse
+
+router = APIRouter()
+
+class ScrapeRequest(BaseModel):
+    url: str
+
+
+def sanitize_filename(url: str) -> str:
+    """Convert a URL into a safe filename."""
+    parsed = urlparse(url)
+    name = parsed.netloc + parsed.path
+    name = re.sub(r'[^\w\-_.]', '_', name)
+    name = name.strip('_')[:100]  # limit length
+    return name + ".html"
+
+@router.post("/scrape")
+async def scrape_url(payload: ScrapeRequest, user_token: dict = Depends(verify_token)):
+    url = payload.url.strip()
+    if not url:
+        raise HTTPException(status_code=400, detail="URL is required")
+    
+    # Add scheme if missing
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+
+    user_email = user_token.get("email")
+    if not user_email:
+        raise HTTPException(status_code=400, detail="User email not found in token")
+
+    # Fetch the page
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; RAG-Bot/1.0)"}
+        response = requests.get(url, timeout=10, headers=headers)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=400, detail=f"Failed to fetch URL: {str(e)}")
+
+    # Check if the response is actually a PDF
+    content_type = response.headers.get("Content-Type", "").lower()
+    is_pdf = "application/pdf" in content_type or url.lower().endswith(".pdf")
+
+    title = urlparse(url).netloc
+    
+    if is_pdf:
+        # Extract text from PDF
+        try:
+            with pdfplumber.open(io.BytesIO(response.content)) as pdf:
+                pages_text = []
+                for i, page in enumerate(pdf.pages):
+                    page_text = page.extract_text()
+                    if page_text:
+                        pages_text.append(f"--- Page {i+1} ---\n{page_text}")
+                text = "\n\n".join(pages_text)
+                title = f"PDF: {urlparse(url).path.split('/')[-1] or urlparse(url).netloc}"
+        except Exception as e:
+            raise HTTPException(status_code=422, detail=f"Failed to scrape PDF: {str(e)}")
+        doc_type = "pdf"
+    else:
+        # Parse and clean HTML using BeautifulSoup
+        soup = BeautifulSoup(response.text, "lxml")
+        
+        # Remove scripts, styles, nav, footer
+        for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
+            tag.decompose()
+        
+        # Extract page title separately, then clean text via shared cleaner
+        title = soup.title.string.strip() if soup.title else urlparse(url).netloc
+        text = clean_html(response.text)
+        doc_type = "web"
+    
+    # File naming for Firestore tracking
+    filename = sanitize_filename(url)
+
+    # --- Chunk & save to Firestore ---
+    chunk_count = chunk_and_save(
+        text=text,
+        document_name=title,
+        user_email=user_email,
+        filename=filename,
+        source_url=url,
+        doc_type=doc_type
+    )
+
+    return {
+        "message": "Page scraped successfully",
+        "url": url,
+        "title": title,
+        "filename": filename,
+        "text": text,
+        "char_count": len(text),
+        "chunk_count": chunk_count
+    }
