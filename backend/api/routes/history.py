@@ -78,8 +78,10 @@ async def get_session_messages(session_id: str, user_token: dict = Depends(verif
     for data in all_data:
         ts = data.get("timestamp")
         messages.append({
-            "query": data.get("query", ""),
-            "reply": data.get("reply", ""),
+            "query":     data.get("query", ""),
+            "reply":     data.get("reply", ""),
+            "sources":   data.get("sources", []),       # [{title, url}, ...]
+            "follow_up": data.get("follow_up", []),     # ["Question?", ...]
             "timestamp": ts.isoformat() if hasattr(ts, "isoformat") else str(ts),
         })
 

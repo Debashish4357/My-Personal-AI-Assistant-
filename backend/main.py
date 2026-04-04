@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 from api.routes import upload, documents, scrape, chat, history
 from core.firebase import init_firebase
+from core.rate_limiter import RateLimitMiddleware
 from services.embedding_scheduler import process_pending_chunks
 
 import logging
@@ -37,9 +38,14 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown(wait=False)
     logging.info("🛑 Embedding scheduler stopped.")
 
-app = FastAPI(title="AI Research Assistant API", lifespan=lifespan)
+app = FastAPI(
+    title="AI Research Assistant API",
+    description="RAG-powered AI assistant with document search, web grounding, and conversation memory.",
+    version="2.0.0",
+    lifespan=lifespan,
+)
 
-# Configure CORS
+# ── Middleware (order matters: CORS first, then rate limiter) ─────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -47,7 +53,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RateLimitMiddleware)
 
+# ── Routers ───────────────────────────────────────────────────────────
 app.include_router(upload.router, prefix="/api")
 app.include_router(documents.router, prefix="/api")
 app.include_router(scrape.router, prefix="/api")
