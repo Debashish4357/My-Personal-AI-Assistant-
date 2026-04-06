@@ -3,6 +3,7 @@ import { Send, Sparkles, Paperclip, Loader2, FileText, Link as LinkIcon, X, Glob
 import ReactMarkdown from 'react-markdown';
 import { auth } from '../../config/firebase';
 import { API_BASE_URL } from '../../config/api';
+import logoUrl from '../../assets/logo.png';
 
 const ChatArea = ({ messages, onSendMessage, user, onDocumentAdded }) => {
   const [input, setInput] = useState('');
@@ -103,7 +104,7 @@ const ChatArea = ({ messages, onSendMessage, user, onDocumentAdded }) => {
     <div className="chat-container">
       <div className="chat-inner">
         <div className="chat-header">
-          <img src="/logo.png" alt="Logo" style={{ width: 28, height: 28, marginRight: '12px', borderRadius: '6px' }} />
+          <img src={logoUrl} alt="Logo" style={{ width: 28, height: 28, marginRight: '12px', borderRadius: '6px' }} />
           <h1>My Personal AI Assistant</h1>
         </div>
 
@@ -114,7 +115,7 @@ const ChatArea = ({ messages, onSendMessage, user, onDocumentAdded }) => {
                 {msg.sender === 'user' ? (
                   <img src={user?.photoURL || ''} alt="User" style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
                 ) : (
-                  <img src="/logo.png" alt="AI" style={{ width: '100%', height: '100%', borderRadius: '6px' }} />
+                  <img src={logoUrl} alt="AI" style={{ width: '100%', height: '100%', borderRadius: '6px' }} />
                 )}
               </div>
               <div className="message-content">
