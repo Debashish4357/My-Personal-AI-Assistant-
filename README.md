@@ -4,6 +4,11 @@ A high-performance, visually stunning RAG (Retrieval-Augmented Generation) assis
 
 ![Logo](frontend/public/logo.png)
 
+Deploy Link-
+https://my-personal-ai-assistant-1.onrender.com/
+
+backend- https://my-personal-ai-assistant-22in.onrender.com/
+
 ## ✨ Features
 
 - 📑 **Smart Document RAG**: Upload PDFs and text files to index them into a private knowledge base.
