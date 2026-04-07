@@ -9,7 +9,7 @@ const Login = () => {
       await signInWithPopup(auth, googleProvider);
     } catch (error) {
       console.error("Error signing in with Google:", error);
-      alert("Failed to sign in. Have you enabled Google Auth in the Firebase Console?");
+      alert("Failed to sign in: " + error.message);
     }
   };
 
