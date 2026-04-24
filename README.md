@@ -60,8 +60,3 @@ backend- https://my-personal-ai-assistant-22in.onrender.com/
    npm run dev
    ```
 
-## 📜 License
-Internal use / Personal Project.
-
----
-*Created with ❤️ by your Personal AI Assistant.*
